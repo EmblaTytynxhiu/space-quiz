@@ -218,6 +218,23 @@
     .result-emoji { margin: 8px 0 12px; font-size: 64px; animation: float 2.4s ease-in-out infinite; }
     .results h1 { margin-top: 0; }
     .final-score { margin: 22px 0 8px; font-size: 46px; font-weight: 900; letter-spacing: -.06em; color: var(--primary); }
+    .best-score {
+      display: inline-block;
+      margin: 0 0 14px;
+      padding: 6px 12px;
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      color: var(--hud);
+      background: var(--hud-soft);
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .record-message {
+      min-height: 24px;
+      margin: 0 auto 10px;
+      color: var(--green);
+      font-weight: 800;
+    }
     .result-copy { margin: 0 auto 28px; max-width: 35ch; color: var(--muted); }
     .restart {
       padding: 13px 22px;
@@ -267,6 +284,8 @@
         <p class="question-number">Mission complete</p>
         <h1 id="resultTitle">Stellar work!</h1>
         <div class="final-score"><span id="finalScore">0</span> / 10</div>
+        <div class="best-score" id="bestScore">Best score: —</div>
+        <p class="record-message" id="recordMessage" role="status"></p>
         <p class="result-copy" id="resultCopy"></p>
         <button class="restart" id="restart">Launch again ↗</button>
       </div>
@@ -287,9 +306,30 @@
     ];
 
     const $ = (id) => document.getElementById(id);
+    const bestScoreKey = "orbit-quiz-best-score";
     let current = 0;
     let score = 0;
     let locked = false;
+
+    function readBestScore() {
+      try {
+        const stored = localStorage.getItem(bestScoreKey);
+        if (stored === null) return null;
+        const value = Number(stored);
+        return Number.isInteger(value) && value >= 0 && value <= questions.length ? value : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveBestScore(value) {
+      try {
+        localStorage.setItem(bestScoreKey, String(value));
+        return true;
+      } catch {
+        return false;
+      }
+    }
 
     function renderQuestion() {
       const item = questions[current];
@@ -338,6 +378,12 @@
       $("quiz").classList.add("hidden");
       $("results").classList.add("visible");
       $("finalScore").textContent = score;
+      const previousBest = readBestScore();
+      const isNewBest = previousBest === null || score > previousBest;
+      const saved = isNewBest ? saveBestScore(score) : true;
+      const best = isNewBest ? score : previousBest;
+      $("bestScore").textContent = best === null ? "Best score: unavailable" : `Best score: ${best} / ${questions.length}`;
+      $("recordMessage").textContent = !saved ? "Best score could not be saved in this browser." : previousBest === null ? "First mission logged — your best score is now saved! 🚀" : isNewBest ? "New best score — mission milestone reached! 🚀" : "";
       const perfect = score === questions.length;
       const great = score >= 7;
       $("resultEmoji").textContent = perfect ? "🏆" : great ? "🌟" : score >= 4 ? "🪐" : "🌙";
